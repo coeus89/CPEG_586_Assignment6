@@ -21,7 +21,16 @@
     <EnableUnmanagedDebugging>false</EnableUnmanagedDebugging>
   </PropertyGroup>
   <ItemGroup>
+    <Compile Include="ActivationFunction.py" />
+    <Compile Include="CNNEnums.py" />
+    <Compile Include="CNNLayer.py" />
+    <Compile Include="FeatureMap.py" />
+    <Compile Include="Layer.py" />
     <Compile Include="Main.py" />
+    <Compile Include="MyEnums.py" />
+    <Compile Include="Network.py" />
+    <Compile Include="Pooling.py" />
+    <Compile Include="Test.py" />
   </ItemGroup>
   <Import Project="$(MSBuildExtensionsPath32)\Microsoft\VisualStudio\v$(VisualStudioVersion)\Python Tools\Microsoft.PythonTools.targets" />
   <!-- Uncomment the CoreCompile target to enable the Build command in
