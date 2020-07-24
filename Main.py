@@ -8,8 +8,8 @@ from MyEnums import *
 
 
 def main():
-    trainingImages = len(os.listdir("C:\\ATTFaceDataSet\\Training"))
-    testImages = len(os.listdir("C:\\ATTFaceDataSet\\Testing"))
+    trainingImages = len(os.listdir("C:\\Data\\Training1000"))
+    testImages = len(os.listdir("C:\\Data\\Test10000"))
     train = np.empty((trainingImages,28,28),dtype=np.float)
     trainY = np.zeros((trainingImages,10))
     test = np.empty((testImages,28,28),dtype=np.float)
@@ -17,10 +17,10 @@ def main():
     
     #load images
     i = 0
-    for filename in os.listdir("C:\\ATTFaceDataSet\\Training"):
+    for filename in os.listdir("C:\\Data\\Training1000"):
         y = int(filename[0])
         trainY[i,y] = 1.0
-        train[i] = cv2.imread('C:\\ATTFaceDataSet\\Training\\{0}'.format(filename),0)/255.0 #for color use 1
+        train[i] = cv2.imread('C:\\Data\\Training1000\\{0}'.format(filename),0)/255.0 #for color use 1
         i += 1
 
     j = 0
@@ -34,7 +34,7 @@ def main():
     testX = test#.reshape(test.shape[0],test.shape[1]*test.shape[2])
 
     numCNNLayers = [6,12] # Number of deep cnn layers
-    numLayers = [100] # Number of classification layers & neurons
+    numLayers = [50,10] # Number of classification layers & neurons
 
     dropOut = 1.0 #20% dropout
     hiddinActivation = ActivationType.RELU

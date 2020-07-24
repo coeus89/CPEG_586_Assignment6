@@ -11,21 +11,16 @@ class CNNLayer(object):
         self.kernelSize = kernelSize
         self.numFeatureMaps = numFeatureMaps
         self.numPrevLayerFeatureMaps = numPrevLayerFeatureMaps
-        self.convOutputSize = inputSize - kernelSize + 1
-        self.ConvolResults = np.zeros((batchSize,numPrevLayerFeatureMaps,numFeatureMaps,self.convOutputSize,self.convOutputSize))
-        self.poolOutputSize = (int)(self.convOutputSize / 2)
+        self.convOutputSize = np.array([inputSize[0] - kernelSize + 1, inputSize[1] - kernelSize + 1])
+        self.ConvolResults = np.zeros((batchSize,numPrevLayerFeatureMaps,numFeatureMaps,self.convOutputSize[0],self.convOutputSize[0]))
+        self.poolOutputSize = np.array([(int)(self.convOutputSize[0] / 2),(int)(self.convOutputSize[1] / 2)])
         for i in range(0,batchSize):
             for j in range(0,numFeatureMaps):
-                self.ConvolSums[i,j] = np.zeros((self.convOutputSize,self.convOutputSize))
+                self.ConvolSums[i,j] = np.zeros((self.convOutputSize[0],self.convOutputSize[1]))
         initRange = (numFeatureMaps/((numPrevLayerFeatureMaps + numFeatureMaps)*(kernelSize**2)))**0.5
-        # self.Kernels = numPrevLayerFeatureMaps,numFeatureMaps,kernelSize
-        # self.KernelGrads = np.zeros((numPrevLayerFeatureMaps,numFeatureMaps))
-        self.Kernels = np.empty((numPrevLayerFeatureMaps,numFeatureMaps),dtype=object)
+        #self.Kernels = np.empty((numPrevLayerFeatureMaps,numFeatureMaps),dtype=object)
+        self.Kernels = np.zeros((numPrevLayerFeatureMaps,numFeatureMaps,kernelSize,kernelSize))
         self.KernelGrads = np.zeros((numPrevLayerFeatureMaps,numFeatureMaps,kernelSize,kernelSize))
-
-        # I don't think i need to init the 2d matrix for the kernels or the kernel grads
-        # self.InitMatrix2DArray(self.Kernels,numPrevLayerFeatureMaps,numFeatureMaps,kernelSize)
-        # self.InitMatrix2DArray(self.KernelGrads,numPrevLayerFeatureMaps,numFeatureMaps,kernelSize)
 
         self.InitializeKernels(initRange)
         self.featureMapList = []
@@ -47,7 +42,7 @@ class CNNLayer(object):
                 self.ConvolResults[batchIndex,i,j] = convolve2d(PrevLayerOutputList[i],currentKernel,mode='valid',boundary='symm')
         # Add Convolution Results
         for q in range(0,len(self.featureMapList)):
-            self.ConvolSums[batchIndex,q] = np.zeros((self.convOutputSize,self.convOutputSize))
+            self.ConvolSums[batchIndex,q] = np.zeros((self.convOutputSize[0],self.convOutputSize[1]))
             for p in range(0,len(PrevLayerOutputList)):
                 #Sum of all of the convolutions for a given input
                 self.ConvolSums[batchIndex,q] += self.ConvolResults[batchIndex,p,q]

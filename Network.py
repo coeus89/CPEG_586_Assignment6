@@ -28,19 +28,21 @@ class Network(object):
         # Initialize the CNN Layers
         for j in range(0,len(numCNNLayers)):
             if (j == 0):
-                inputSize = self.X.shape[1]
+                #inputSize = self.X.shape[1]
+                inputSize = self.X[0].shape
                 self.myCNNLayers.append(CNNLayer(self.numCNNLayers[j],1,inputSize,kernelSize,poolingType,activationFunction,batchSize))
             else:
-                inputSize = self.X.shape[1]
+                #inputSize = self.X.shape[1]
+                inputSize = self.X[0].shape
                 for k in range(1, j+1):
-                    inputSize = (int)((inputSize - kernelSize + 1)/2) # Make sure the 2nd layer input is 12
+                    inputSize = np.array([(int)((inputSize[0] - kernelSize + 1)/2),(int)((inputSize[1] - kernelSize + 1)/2)])  # Make sure the 2nd layer input is 12
                 self.myCNNLayers.append(CNNLayer(self.numCNNLayers[j],self.numCNNLayers[j-1],inputSize,kernelSize,poolingType,activationFunction,batchSize))
 
         # Initialize the Normal Layers
         for i in range(self.numOfLayers):
             if (i == 0):
                 # First NN layer coming from a CNN
-                prevFeatureMapSize = (self.myCNNLayers[len(self.myCNNLayers) - 1].poolOutputSize)**2
+                prevFeatureMapSize = (self.myCNNLayers[len(self.myCNNLayers) - 1].poolOutputSize[0])**2
                 flattenSize = (prevFeatureMapSize) * self.myCNNLayers[len(self.myCNNLayers) - 1].numFeatureMaps
                 # make the layer
                 layer = Layer(self.numLayers[i],flattenSize,False,self.dropout,self.activationFunction)
@@ -66,7 +68,7 @@ class Network(object):
                 PrevOut = batch 
             else:
                 poolOutputSize = self.myCNNLayers[j - 1].poolOutputSize
-                PrevOut = np.zeros((batchSize, self.myCNNLayers[j-1].numFeatureMaps,poolOutputSize,poolOutputSize))
+                PrevOut = np.zeros((batchSize, self.myCNNLayers[j-1].numFeatureMaps,poolOutputSize[0],poolOutputSize[1]))
                 for k in range(0,len(self.myCNNLayers[j-1].featureMapList)): # select Feature Map
                     BatchFeatureMapOut = self.myCNNLayers[j - 1].featureMapList[k].OutputPool
                     #for m in range(0, len(BatchFeatureMapOut)): # This puts the prevOut in the format [batch,featureMapOutput] for a batch of 5 and 4 feature maps it will be 5x4x12x12
@@ -81,7 +83,7 @@ class Network(object):
         
         # Flatten the last CNN output
         # get the Feature Map Output Pools into the format [batch,OutputVectors] which should be a 5 x 6 for a batch size of 5 and a feature map size of 6.
-        featureMapSize = (self.myCNNLayers[len(self.myCNNLayers) - 1].poolOutputSize)**2
+        featureMapSize = (self.myCNNLayers[len(self.myCNNLayers) - 1].poolOutputSize[0])**2
         flattenSize = (featureMapSize) * self.myCNNLayers[len(self.myCNNLayers) - 1].numFeatureMaps
         self.Flatten = np.zeros((batchSize,flattenSize))
         for bIndex in range(0,batchSize):
@@ -123,13 +125,13 @@ class Network(object):
             deltaFlatten = self.Layers[0].CalcDeltaFlatten()
             #currCNNLayer = self.myCNNLayers[self.numOfCNNLayers - 1]
             poolOutputSize = currCNNLayer.poolOutputSize
-            pool2 = poolOutputSize**2
-            #res = np.zeros((self.batchSize,currNumFeatureMaps,poolOutputSize,poolOutputSize))
+            #pool2 = poolOutputSize**2
+            pool2 = poolOutputSize[0] * poolOutputSize[1]
             for i in range(0,self.batchSize):
                 for j in range(0,currNumFeatureMaps):
                     #res[i,j] = deltaFlatten[i,j*pool2:j*pool2 + pool2].reshape(poolOutputSize,poolOutputSize)
                     #Calc DeltaPool
-                    currCNNLayer.featureMapList[j].DeltaPool[i] = deltaFlatten[i,j*pool2:j*pool2 + pool2].reshape(poolOutputSize,poolOutputSize)
+                    currCNNLayer.featureMapList[j].DeltaPool[i] = deltaFlatten[i,j*pool2:j*pool2 + pool2].reshape(poolOutputSize[0],poolOutputSize[1])
         else:
             temp = "Pause" #this needs to become the general case. Calc? the delta pool from previous layer.
             #Get DeltaPool via convolution
