@@ -12,7 +12,7 @@ class CNNLayer(object):
         self.numFeatureMaps = numFeatureMaps
         self.numPrevLayerFeatureMaps = numPrevLayerFeatureMaps
         self.convOutputSize = np.array([inputSize[0] - kernelSize + 1, inputSize[1] - kernelSize + 1])
-        self.ConvolResults = np.zeros((batchSize,numPrevLayerFeatureMaps,numFeatureMaps,self.convOutputSize[0],self.convOutputSize[0]))
+        self.ConvolResults = np.zeros((batchSize,numPrevLayerFeatureMaps,numFeatureMaps,self.convOutputSize[0],self.convOutputSize[1]))
         self.poolOutputSize = np.array([(int)(self.convOutputSize[0] / 2),(int)(self.convOutputSize[1] / 2)])
         for i in range(0,batchSize):
             for j in range(0,numFeatureMaps):
@@ -20,7 +20,8 @@ class CNNLayer(object):
         initRange = (numFeatureMaps/((numPrevLayerFeatureMaps + numFeatureMaps)*(kernelSize**2)))**0.5
         #self.Kernels = np.empty((numPrevLayerFeatureMaps,numFeatureMaps),dtype=object)
         self.Kernels = np.zeros((numPrevLayerFeatureMaps,numFeatureMaps,kernelSize,kernelSize))
-        self.KernelGrads = np.zeros((numPrevLayerFeatureMaps,numFeatureMaps,kernelSize,kernelSize))
+        self.KernelGrads = np.zeros((numPrevLayerFeatureMaps,numFeatureMaps,kernelSize,kernelSize)) 
+        self.KernelGradsSiamese = np.zeros((numPrevLayerFeatureMaps,numFeatureMaps,kernelSize,kernelSize)) # for siamese
 
         self.InitializeKernels(initRange)
         self.featureMapList = []
@@ -29,9 +30,11 @@ class CNNLayer(object):
 
     def ClearKernelGrads(self):
         self.KernelGrads = np.zeros((self.numPrevLayerFeatureMaps,self.numFeatureMaps,self.kernelSize,self.kernelSize))
+        self.KernelGradsSiamese = np.zeros((self.numPrevLayerFeatureMaps,self.numFeatureMaps,self.kernelSize,self.kernelSize))
         for i in range(0,len(self.featureMapList)):
                 fmp = self.featureMapList[i]
                 fmp.BiasGradient = 0
+                fmp.BiasGradientSiamese = 0
 
     def Evaluate(self,PrevLayerOutputList,batchIndex):
         # inputs are from the previous layer (unless first layer)

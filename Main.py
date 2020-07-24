@@ -8,33 +8,42 @@ from MyEnums import *
 
 
 def main():
-    trainingImages = len(os.listdir("C:\\Data\\Training1000"))
-    testImages = len(os.listdir("C:\\Data\\Test10000"))
-    train = np.empty((trainingImages,28,28),dtype=np.float)
-    trainY = np.zeros((trainingImages,10))
-    test = np.empty((testImages,28,28),dtype=np.float)
-    testY = np.zeros((testImages,10))
+    temp = np.array(["this is a string","This is another staring"])
+    tempFileName = (os.listdir('C:\\ATTFaceDataSet\\Training'))[0]
+    tempFile = cv2.imread('C:\\ATTFaceDataSet\\Training\\{0}'.format(tempFileName))
+    width = tempFile.shape[1]
+    height = tempFile.shape[0]
+    trainingImages = len(os.listdir("C:\\ATTFaceDataSet\\Training"))
+    testImages = len(os.listdir("C:\\ATTFaceDataSet\\Testing"))
+    train = np.empty((trainingImages,height,width),dtype=np.float)
+    trainY = np.empty((trainingImages),dtype='<U23') # This means string in numpy apparently
+    test = np.empty((testImages,height,width),dtype=np.float)
+    testY = np.empty((trainingImages),dtype='<U23') # This means string in numpy apparently
     
     #load images
     i = 0
-    for filename in os.listdir("C:\\Data\\Training1000"):
-        y = int(filename[0])
-        trainY[i,y] = 1.0
-        train[i] = cv2.imread('C:\\Data\\Training1000\\{0}'.format(filename),0)/255.0 #for color use 1
+    for filename in os.listdir("C:\\ATTFaceDataSet\\Training"):
+        y = filename.split('_')[0]
+        trainY[i] = str(y)
+        train[i] = cv2.imread('C:\\ATTFaceDataSet\\Training\\{0}'.format(filename),0)/255.0 #for color use 1
         i += 1
 
     j = 0
-    for filename in os.listdir("C:\\Data\\Test10000"):
-        y = int(filename[0])
-        testY[j,y] = 1.0
-        test[j] = cv2.imread('C:\\Data\\Test10000\\{0}'.format(filename),0)/255.0 
+    for filename in os.listdir("C:\\ATTFaceDataSet\\Testing"):
+        y = filename.split('_')[0]
+        testY[j] = str(y)
+        test[j] = cv2.imread('C:\\ATTFaceDataSet\\Testing\\{0}'.format(filename),0)/255.0 
         j += 1
 
     trainX = train#.reshape(train.shape[0],train.shape[1]*train.shape[2])
     testX = test#.reshape(test.shape[0],test.shape[1]*test.shape[2])
 
+
+    # Configuration Start for Siamese Network
+
     numCNNLayers = [6,12] # Number of deep cnn layers
-    numLayers = [50,10] # Number of classification layers & neurons
+    numLayers = [100] # Number of classification layers = 1 & Number of Neurons = 100
+    # Should NN Layer be Softmax???
 
     dropOut = 1.0 #20% dropout
     hiddinActivation = ActivationType.RELU

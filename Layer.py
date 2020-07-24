@@ -21,6 +21,9 @@ class Layer(object):
         self.a = np.zeros((numNeurons))
         self.derivAF = np.zeros((numNeurons)) # deriv of Activation function
         self.zeroout = None #for dropout
+        # For Siamese
+        self.gradwSiamese = np.zeros((numNeurons,numNeuronsPrevLayer))
+        self.gradbSiamese = np.zeros((numNeurons))
         # For Adam
         self.mtw = np.zeros((self.w.shape))
         self.mtb = np.zeros((self.b.shape))
@@ -104,11 +107,16 @@ class Layer(object):
         return ex
     
     
-    def CalcAdam(self, itnum, learningRate, batchSize, doBatchNorm, Beta1 = 0.9, Beta2 = 0.999, epsilon = 1e-6):
-        self.mtw = Beta1 * self.mtw + (1 - Beta1)*self.gradw
-        self.mtb = Beta1 * self.mtb + (1 - Beta1)*self.gradb
-        self.vtw = Beta2 * self.vtw + (1 - Beta2)*self.gradw*self.gradw
-        self.vtb = Beta2 * self.vtb + (1 - Beta2)*self.gradb*self.gradb
+    def CalcAdam(self, itnum, learningRate, batchSize, doBatchNorm, Beta1 = 0.9, Beta2 = 0.999, epsilon = 1e-6,UpdateSiameseWB = False):
+        WGrad = self.gradw
+        BGrad = self.gradb
+        if(UpdateSiameseWB == True):
+            WGrad = self.gradw - self.gradwSiamese
+            BGrad = self.gradb - self.gradbSiamese
+        self.mtw = Beta1 * self.mtw + (1 - Beta1)*WGrad
+        self.mtb = Beta1 * self.mtb + (1 - Beta1)*BGrad
+        self.vtw = Beta2 * self.vtw + (1 - Beta2)*WGrad*WGrad
+        self.vtb = Beta2 * self.vtb + (1 - Beta2)*BGrad*BGrad
 
         mtwhat = self.mtw / (1 - Beta1**itnum)
         mtbhat = self.mtb / (1 - Beta1**itnum)
@@ -122,8 +130,8 @@ class Layer(object):
             self.UpdateBetaGamma(learningRate)
     
     def UpdateWb(self, learningRate, batchSize, doBatchNorm):
-        self.w = self.w - learningRate * (1/batchSize) * self.gradw #- learningRate * lambda1 * self.w.sum()
-        self.b = self.b - learningRate * (1/batchSize) * self.gradb
+        self.w = self.w - learningRate * (1/batchSize) * (self.gradw - self.gradwSiamese)#- learningRate * lambda1 * self.w.sum()
+        self.b = self.b - learningRate * (1/batchSize) * (self.gradb - self.gradbSiamese)
         if (doBatchNorm == True):
             self.UpdateBetaGamma(learningRate)
     
@@ -159,11 +167,15 @@ class Layer(object):
         self.dbeta = np.sum(self.delta,axis=0)
         self.deltabn = (self.delta * self.gamma) / (batchSize * np.sqrt(self.BatchVariance + Layer.Epsillon)) * (batchSize - 1 - (self.sihat * self.sihat))
 
-    def CalcGradients(self, prevOut):
-        self.gradw = np.dot(self.deltabn.T,prevOut)
-        self.gradb = self.deltabn.sum(axis=0)
+    def CalcGradients(self, prevOut, UpdateSiameseWB = False):
+        if (UpdateSiameseWB == False):
+            self.gradw = np.dot(self.deltabn.T,prevOut)
+            self.gradb = self.deltabn.sum(axis=0)
+        else:
+            self.gradwSiamese = np.dot(self.deltabn.T,prevOut)
+            self.gradbSiamese = self.deltabn.sum(axis=0)
         #it shouldnt matter if it's batch norm or not because we set deltabn = delta in CalcDelta method
-
+    
     def UpdateBetaGamma(self, learningRate): #only for batch norm
         self.beta = self.beta - learningRate * self.dbeta
         self.gamma = self.gamma - learningRate * self.dgamma

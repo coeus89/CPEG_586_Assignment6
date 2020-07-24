@@ -18,6 +18,7 @@ class FeatureMap(object):
         self.Sum = np.zeros((batchSize,inputDataSize[0],inputDataSize[1])) # Sum of convolution result and bias. Before Activation Function.
         self.Bias = 0 # one bias for one feature map
         self.BiasGradient = 0
+        self.BiasGradientSiamese = 0
     
     def Evaluate(self,inputData,batchIndex):
         numRows = inputData.shape[0] # make sure this really gets the rows
