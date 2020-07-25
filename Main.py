@@ -50,7 +50,7 @@ def main():
     LLActivation = ActivationType.SOFTMAX
     kernelSize = 5
     poolingType = PoolingType.AVGPOOLING
-    batchSize = 5
+    batchSize = 1 # This is supposed to be stochastic
 
     myNetwork = Network(trainX,trainY,numCNNLayers,kernelSize,poolingType,numLayers,dropOut,hiddinActivation,LLActivation,batchSize)
 

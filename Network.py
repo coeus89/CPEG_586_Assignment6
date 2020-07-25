@@ -196,8 +196,9 @@ class Network(object):
                             self.myCNNLayers[layerNumber].KernelGradsSiamese[p,q] += convolve2d(part1,part2,mode='valid',boundary='symm')
                 # Find deltaPool for previous Layer
                 for p in range(0,numFeaturesPrevLayer):
-                    size = self.myCNNLayers[layerNumber - 1].featureMapList[p].OutputPool[i].shape[0]
-                    self.myCNNLayers[layerNumber - 1].featureMapList[p].DeltaPool[i] = np.zeros((size,size))
+                    size0 = self.myCNNLayers[layerNumber - 1].featureMapList[p].OutputPool[i].shape[0]
+                    size1 = self.myCNNLayers[layerNumber - 1].featureMapList[p].OutputPool[i].shape[1]
+                    self.myCNNLayers[layerNumber - 1].featureMapList[p].DeltaPool[i] = np.zeros((size0,size1))
                     for q in range(0,numFeaturesThisLayer):
                         # Prev Layer DeltaPool
                         part1 = self.myCNNLayers[layerNumber].featureMapList[p].DeltaCV[i]
@@ -219,7 +220,7 @@ class Network(object):
     def Train(self,Epochs,LearningRate,doBatchNorm = False,lroptimization = LROptimizerType.NONE):
         for ep in range(0,Epochs):
             loss = 0
-            itnum_i = 0
+            itnum = 0
             self.X, self.Y = shuffle(self.X, self.Y)
             self.X2, self.Y2 = shuffle(self.X, self.Y)
             # self.X, self.Y = shuffle(self.X, self.Y, random_state=0)
@@ -251,20 +252,24 @@ class Network(object):
                         Y_Sim[j] = (batch_y1[j] == batch_y2[j])
                     
                     # Find delta for Dw
-                    deltaDw = np.zeros((self.batchSize))
+                    #deltaDw = np.zeros((self.batchSize))
+                    deltaDw = np.zeros((LLa1.shape))
                     for k in range (0,self.batchSize):
                         if (Y_Sim[k]): #if they are similar
-                            deltaDw[k] = np.sum(LLa1[k] - LLa2[k])
+                            #deltaDw[k] = np.sum(LLa1[k] - LLa2[k])
+                            deltaDw[k] = LLa1[k] - LLa2[k]
                         else: #if they are NOT similar
                             if (Dw[k] > self.Margin):
                                 deltaDw[k] = 0
                             else:
-                                deltaDw[k] = (-(self.Margin - Dw[k])/Dw[k])*np.sum(LLa1[k]-LLa2[k])
+                                #deltaDw[k] = (-(self.Margin - Dw[k])/Dw[k])*np.sum(LLa1[k]-LLa2[k])
+                                deltaDw[k] = (-(self.Margin - Dw[k])/Dw[k])*(LLa1[k]-LLa2[k])
                         
                     # Find Deltas / Gradients for batch_i NN and CNN
+                    # only one NN layer in Siamese Network
                     layerNumber = self.numOfLayers - 1
                     while (layerNumber >= 0):
-                        self.Layers[len(self.Layers) - 1].deltabn = derivLLa1 * deltaDw # only one NN layer in Siamese Network
+                        self.Layers[len(self.Layers) - 1].deltabn = derivLLa1 * deltaDw 
                         self.CalcGradients(layerNumber)
                         layerNumber -= 1
                     
@@ -272,7 +277,7 @@ class Network(object):
                     CNNLayerNumber = self.numOfCNNLayers - 1
                     while (CNNLayerNumber >= 0):
                         self.CNNBackProp(CNNLayerNumber,batch_x1)
-                    CNNLayerNumber -= 1
+                        CNNLayerNumber -= 1
 
                     # Find Deltas / Gradients for batch_j nn and CNN
                     UpdateSiameseWB = True
@@ -286,7 +291,7 @@ class Network(object):
                     CNNLayerNumber = self.numOfCNNLayers - 1
                     while (CNNLayerNumber >= 0):
                         self.CNNBackProp(CNNLayerNumber,batch_x2,UpdateSiameseWB)
-                    CNNLayerNumber -= 1
+                        CNNLayerNumber -= 1
                     
                     # Find Loss
                     for m in range(0,self.batchSize):
@@ -294,50 +299,11 @@ class Network(object):
                     
                     
                     
-                    # if (self.lastLayerAF == ActivationType.SOFTMAX):
-                    #     # Use cross entropy loss
-                    #     loss += (-batch_y1*np.log(LLa1)).sum()
-                    # else:
-                    #     # use mean square loss
-                    #     loss += (0.5 * (batch_y1 - LLa1)**2)
+                    self.UpdateGradsBiases(LearningRate,self.batchSize,lroptimization,itnum,doBatchNorm)
+                    self.UpdateCNNKernelsBiases(LearningRate,self.batchSize)
+                    self.clearCNNGradients()
                 
-                itnum_i += 1
-
-
-            #_______________OLD_______________
-            # Evaluate CNN and Normal Layers
-            # for batch_i in range(0, self.X.shape[0], self.batchSize):
-            #     batch_x = self.X[batch_i:batch_i + self.batchSize]
-            #     batch_y = self.Y[batch_i:batch_i + self.batchSize]
-            #     # Need to add the 1 into the array so that the CNN likes the shape
-            #     batch_x = batch_x.reshape(batch_x.shape[0],1,batch_x.shape[1],batch_x.shape[2])
-            #     #batch_y = batch_y.reshape(batch_y.shape[0],1,batch_y.shape[1],batch_y.shape[2])
-            #     LLa = self.Evaluate(batch_x,self.batchSize,doBatchNorm,BatchNormMode.TRAIN) # Last Layer 'a' value
-                
-            #     if (self.lastLayerAF == ActivationType.SOFTMAX):
-            #         # Use cross entropy loss
-            #         loss += (-batch_y*np.log(LLa)).sum()
-            #     else:
-            #         # use mean square loss
-            #         loss += (0.5 * (batch_y - LLa)**2)
-
-            #     # Calc NN Deltas
-            #     layerNumber = self.numOfLayers - 1
-            #     while (layerNumber >= 0):
-            #         self.BackProp(batch_x,batch_y,layerNumber,self.batchSize,doBatchNorm,BatchNormMode.TRAIN)
-            #         self.CalcGradients(layerNumber)
-            #         layerNumber -= 1
-
-            #     Calc CNN Deltas
-            #     CNNLayerNumber = self.numOfCNNLayers - 1
-            #     while (CNNLayerNumber >= 0):
-            #         self.CNNBackProp(CNNLayerNumber,batch_x)
-            #         CNNLayerNumber -= 1
-
-            #     itnum += 1
-            #     self.UpdateGradsBiases(LearningRate,self.batchSize,lroptimization,itnum,doBatchNorm)
-            #     self.UpdateCNNKernelsBiases(LearningRate,self.batchSize)
-            #     self.clearCNNGradients()
+                itnum += 1
             print("Epoch: " + str(ep) + ",   Loss: "+ str(loss))
     
     def CalcGradients(self,layerNumber, UpdateSiameseWB = False):
